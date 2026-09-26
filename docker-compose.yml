@@ -1,0 +1,73 @@
+services:
+
+  oracle-xe:
+    image: gvenzl/oracle-xe:21-slim
+    container_name: oracle-xe
+
+    ports:
+      - "1521:1521"
+
+    environment:
+      ORACLE_PASSWORD: ${ORACLE_PASSWORD:-oracle}
+
+    volumes:
+      - oracle-data:/opt/oracle/oradata
+
+    networks:
+      - energia-network
+
+    healthcheck:
+      test: ["CMD", "healthcheck.sh"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 30s
+
+
+  eureka-server:
+    build:
+      context: ./eureka-server/eureka-server
+
+    container_name: eureka-server
+
+    ports:
+      - "5050:5050"
+
+    networks:
+      - energia-network
+
+
+  energia-ms:
+    build:
+      context: ./energia-ms/energia-ms
+
+    container_name: energia-ms
+
+    ports:
+      - "8081:8081"
+
+    environment:
+      DB_URL: jdbc:oracle:thin:@oracle-xe:1521/XEPDB1
+      DB_USERNAME: ${DB_USERNAME:-system}
+      DB_PASSWORD: ${DB_PASSWORD:-oracle}
+      EUREKA_URL: http://eureka-server:5050/eureka/
+
+    depends_on:
+      oracle-xe:
+        condition: service_healthy
+
+      eureka-server:
+        condition: service_started
+
+    restart: on-failure
+
+    networks:
+      - energia-network
+
+
+volumes:
+  oracle-data:
+
+
+networks:
+  energia-network:
