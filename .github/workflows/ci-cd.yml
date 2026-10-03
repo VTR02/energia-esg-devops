@@ -1,0 +1,188 @@
+name: CI/CD Energia ESG
+
+permissions:
+  contents: read
+  packages: write
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+
+  pull_request:
+    branches:
+      - main
+
+jobs:
+
+  build-eureka:
+    name: Build e Testes Eureka
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: eureka-server/eureka-server
+
+    steps:
+      - name: Checkout do codigo
+        uses: actions/checkout@v4
+
+      - name: Configurar Java 21
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      - name: Dar permissao ao Maven Wrapper
+        run: chmod +x mvnw
+
+      - name: Build Eureka
+        run: ./mvnw clean package -DskipTests
+
+      - name: Executar testes Eureka
+        run: ./mvnw test
+
+
+  build-energia:
+    name: Build e Testes Energia MS
+    runs-on: ubuntu-latest
+
+    services:
+      oracle:
+        image: gvenzl/oracle-xe:21-slim
+
+        env:
+          ORACLE_PASSWORD: oracle
+
+        ports:
+          - 1521:1521
+
+        options: >-
+          --health-cmd healthcheck.sh
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 15
+
+    defaults:
+      run:
+        working-directory: energia-ms/energia-ms
+
+    env:
+      DB_URL: jdbc:oracle:thin:@localhost:1521/XEPDB1
+      DB_USERNAME: system
+      DB_PASSWORD: oracle
+      EUREKA_CLIENT_ENABLED: false
+
+    steps:
+      - name: Checkout do codigo
+        uses: actions/checkout@v4
+
+      - name: Configurar Java 21
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      - name: Dar permissao ao Maven Wrapper
+        run: chmod +x mvnw
+
+      - name: Build Energia MS
+        run: ./mvnw clean package -DskipTests
+
+      - name: Executar testes Energia MS
+        run: ./mvnw test
+
+
+  docker-build:
+    name: Docker Build e Publicacao GHCR
+    runs-on: ubuntu-latest
+
+    needs:
+      - build-eureka
+      - build-energia
+
+    steps:
+      - name: Checkout do codigo
+        uses: actions/checkout@v4
+
+      - name: Build Docker Eureka
+        run: |
+          docker build \
+            -t energia-eureka:latest \
+            ./eureka-server/eureka-server
+
+      - name: Build Docker Energia MS
+        run: |
+          docker build \
+            -t ghcr.io/vtr02/energia-ms:latest \
+            -t ghcr.io/vtr02/energia-ms:${{ github.sha }} \
+            ./energia-ms/energia-ms
+
+      - name: Login no GitHub Container Registry
+        if: github.event_name == 'push'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publicar Energia MS no GHCR
+        if: github.event_name == 'push'
+        run: |
+          docker push ghcr.io/vtr02/energia-ms:latest
+          docker push ghcr.io/vtr02/energia-ms:${{ github.sha }}
+
+
+  deploy-staging:
+    name: Deploy Staging Azure
+    runs-on: ubuntu-latest
+
+    needs:
+      - docker-build
+
+    if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
+
+    steps:
+      - name: Login no Azure
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Deploy no Staging
+        run: |
+          az containerapp update \
+            --name energia-esg-staging \
+            --resource-group energia-esg-rg \
+            --image ghcr.io/vtr02/energia-ms:${{ github.sha }} \
+            --min-replicas 1 \
+            --max-replicas 1 \
+            --set-env-vars SPRING_PROFILES_ACTIVE=cloud
+
+
+  deploy-production:
+    name: Deploy Producao Azure
+    runs-on: ubuntu-latest
+
+    needs:
+      - docker-build
+
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Login no Azure
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Deploy em Producao
+        run: |
+          az containerapp update \
+            --name energia-esg-prod \
+            --resource-group energia-esg-rg \
+            --image ghcr.io/vtr02/energia-ms:${{ github.sha }} \
+            --min-replicas 1 \
+            --max-replicas 1 \
+            --set-env-vars SPRING_PROFILES_ACTIVE=cloud
