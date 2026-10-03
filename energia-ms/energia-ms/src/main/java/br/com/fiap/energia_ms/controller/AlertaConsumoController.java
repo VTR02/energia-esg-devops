@@ -2,6 +2,9 @@ package br.com.fiap.energia_ms.controller;
 
 import br.com.fiap.energia_ms.model.AlertaConsumo;
 import br.com.fiap.energia_ms.repository.AlertaConsumoRepository;
+import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -13,47 +16,58 @@ public class AlertaConsumoController {
     private final AlertaConsumoRepository repository;
 
     public AlertaConsumoController(
-            AlertaConsumoRepository repository){
+            AlertaConsumoRepository repository) {
 
         this.repository = repository;
     }
 
     @GetMapping
-    public List<AlertaConsumo> listar(){
-
-        return repository.findAll();
+    public ResponseEntity<List<AlertaConsumo>> listar() {
+        return ResponseEntity.ok(repository.findAll());
     }
 
     @PostMapping
-    public AlertaConsumo cadastrar(
-            @RequestBody AlertaConsumo alerta){
+    public ResponseEntity<AlertaConsumo> cadastrar(
+            @RequestBody @Valid AlertaConsumo alerta) {
 
-        return repository.save(alerta);
+        AlertaConsumo salvo = repository.save(alerta);
+
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(salvo);
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<AlertaConsumo> atualizar(
+            @PathVariable Long id,
+            @RequestBody @Valid AlertaConsumo alertaAtualizado) {
+
+        return repository.findById(id)
+                .map(alerta -> {
+
+                    alerta.setMensagem(
+                            alertaAtualizado.getMensagem());
+
+                    alerta.setDataAlerta(
+                            alertaAtualizado.getDataAlerta());
+
+                    alerta.setEquipamento(
+                            alertaAtualizado.getEquipamento());
+
+                    return ResponseEntity.ok(repository.save(alerta));
+                })
+                .orElse(ResponseEntity.notFound().build());
     }
 
     @DeleteMapping("/{id}")
-    public void deletar(
-            @PathVariable Long id){
+    public ResponseEntity<Void> deletar(@PathVariable Long id) {
+
+        if (!repository.existsById(id)) {
+            return ResponseEntity.notFound().build();
+        }
 
         repository.deleteById(id);
-    }
-    @PutMapping("/{id}")
-    public AlertaConsumo atualizar(
-            @PathVariable Long id,
-            @RequestBody AlertaConsumo alertaAtualizado) {
 
-        AlertaConsumo alerta = repository.findById(id)
-                .orElseThrow();
-
-        alerta.setMensagem(
-                alertaAtualizado.getMensagem());
-
-        alerta.setDataAlerta(
-                alertaAtualizado.getDataAlerta());
-
-        alerta.setEquipamento(
-                alertaAtualizado.getEquipamento());
-
-        return repository.save(alerta);
+        return ResponseEntity.noContent().build();
     }
 }
