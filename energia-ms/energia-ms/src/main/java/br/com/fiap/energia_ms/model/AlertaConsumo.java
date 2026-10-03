@@ -1,6 +1,8 @@
 package br.com.fiap.energia_ms.model;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -16,11 +18,14 @@ public class AlertaConsumo {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private String mensagem;
+@NotBlank
+private String mensagem;
 
-    private LocalDate dataAlerta;
+@NotNull
+private LocalDate dataAlerta;
 
-    @ManyToOne
-    @JoinColumn(name="equipamento_id")
-    private Equipamento equipamento;
+@NotNull
+@ManyToOne
+@JoinColumn(name="equipamento_id")
+private Equipamento equipamento;
 }
