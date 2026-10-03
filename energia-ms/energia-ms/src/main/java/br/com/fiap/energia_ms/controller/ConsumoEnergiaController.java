@@ -3,6 +3,8 @@ package br.com.fiap.energia_ms.controller;
 import br.com.fiap.energia_ms.model.ConsumoEnergia;
 import br.com.fiap.energia_ms.repository.ConsumoEnergiaRepository;
 import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -20,38 +22,52 @@ public class ConsumoEnergiaController {
     }
 
     @GetMapping
-    public List<ConsumoEnergia> listar() {
-        return repository.findAll();
+    public ResponseEntity<List<ConsumoEnergia>> listar() {
+        return ResponseEntity.ok(repository.findAll());
     }
 
     @PostMapping
-    public ConsumoEnergia cadastrar(
+    public ResponseEntity<ConsumoEnergia> cadastrar(
             @RequestBody @Valid ConsumoEnergia consumo) {
 
-        return repository.save(consumo);
+        ConsumoEnergia salvo = repository.save(consumo);
+
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(salvo);
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<ConsumoEnergia> atualizar(
+            @PathVariable Long id,
+            @RequestBody @Valid ConsumoEnergia consumoAtualizado) {
+
+        return repository.findById(id)
+                .map(consumo -> {
+
+                    consumo.setConsumoKwh(
+                            consumoAtualizado.getConsumoKwh());
+
+                    consumo.setDataRegistro(
+                            consumoAtualizado.getDataRegistro());
+
+                    consumo.setEquipamento(
+                            consumoAtualizado.getEquipamento());
+
+                    return ResponseEntity.ok(repository.save(consumo));
+                })
+                .orElse(ResponseEntity.notFound().build());
     }
 
     @DeleteMapping("/{id}")
-    public void deletar(@PathVariable Long id) {
+    public ResponseEntity<Void> deletar(@PathVariable Long id) {
+
+        if (!repository.existsById(id)) {
+            return ResponseEntity.notFound().build();
+        }
+
         repository.deleteById(id);
-    }
-    @PutMapping("/{id}")
-    public ConsumoEnergia atualizar(
-            @PathVariable Long id,
-            @RequestBody ConsumoEnergia consumoAtualizado) {
 
-        ConsumoEnergia consumo = repository.findById(id)
-                .orElseThrow();
-
-        consumo.setConsumoKwh(
-                consumoAtualizado.getConsumoKwh());
-
-        consumo.setDataRegistro(
-                consumoAtualizado.getDataRegistro());
-
-        consumo.setEquipamento(
-                consumoAtualizado.getEquipamento());
-
-        return repository.save(consumo);
+        return ResponseEntity.noContent().build();
     }
 }
