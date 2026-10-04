@@ -3,6 +3,8 @@ package br.com.fiap.energia_ms.controller;
 import br.com.fiap.energia_ms.model.LimiteConsumo;
 import br.com.fiap.energia_ms.repository.LimiteConsumoRepository;
 import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -20,36 +22,49 @@ public class LimiteConsumoController {
     }
 
     @GetMapping
-    public List<LimiteConsumo> listar() {
-        return repository.findAll();
+    public ResponseEntity<List<LimiteConsumo>> listar() {
+        return ResponseEntity.ok(repository.findAll());
     }
 
     @PostMapping
-    public LimiteConsumo cadastrar(
+    public ResponseEntity<LimiteConsumo> cadastrar(
             @RequestBody @Valid LimiteConsumo limite) {
 
-        return repository.save(limite);
-    }
+        LimiteConsumo salvo = repository.save(limite);
 
-    @DeleteMapping("/{id}")
-    public void deletar(@PathVariable Long id) {
-        repository.deleteById(id);
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(salvo);
     }
 
     @PutMapping("/{id}")
-    public LimiteConsumo atualizar(
+    public ResponseEntity<LimiteConsumo> atualizar(
             @PathVariable Long id,
-            @RequestBody LimiteConsumo limiteAtualizado) {
+            @RequestBody @Valid LimiteConsumo limiteAtualizado) {
 
-        LimiteConsumo limite = repository.findById(id)
-                .orElseThrow();
+        return repository.findById(id)
+                .map(limite -> {
 
-        limite.setLimiteKwh(
-                limiteAtualizado.getLimiteKwh());
+                    limite.setLimiteKwh(
+                            limiteAtualizado.getLimiteKwh());
 
-        limite.setEquipamento(
-                limiteAtualizado.getEquipamento());
+                    limite.setEquipamento(
+                            limiteAtualizado.getEquipamento());
 
-        return repository.save(limite);
+                    return ResponseEntity.ok(repository.save(limite));
+                })
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deletar(@PathVariable Long id) {
+
+        if (!repository.existsById(id)) {
+            return ResponseEntity.notFound().build();
+        }
+
+        repository.deleteById(id);
+
+        return ResponseEntity.noContent().build();
     }
 }

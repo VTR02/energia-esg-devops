@@ -18,12 +18,14 @@ public class ConsumoEnergia {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @NotNull
     @Positive
     private Double consumoKwh;
-
+    
     @NotNull
     private LocalDate dataRegistro;
 
+    @NotNull
     @ManyToOne
     @JoinColumn(name = "equipamento_id")
     private Equipamento equipamento;
