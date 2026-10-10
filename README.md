@@ -1,135 +1,66 @@
-# API ESG - Eficiência Energética e Sustentabilidade
+# Projeto - Cidades ESG Inteligentes
 
-## Descrição
+## API ESG - Eficiência Energética e Sustentabilidade
 
-Projeto desenvolvido utilizando Spring Boot com foco em ESG (Environmental, Social and Governance), no tema:
+Projeto desenvolvido para a disciplina de DevOps da FIAP, utilizando uma aplicação Java Spring Boot com foco em ESG (Environmental, Social and Governance).
 
-Eficiência energética e sustentabilidade.
+O sistema tem como objetivo auxiliar no controle e monitoramento de consumo energético, permitindo o gerenciamento de equipamentos, registros de consumo, limites de consumo, alertas e desligamentos.
 
-O sistema realiza monitoramento de equipamentos, consumo energético, limites de consumo, alertas automáticos e desligamentos programados.
+---
+
+## Integrantes
+
+- Nome: Vitor Hugo Araujo Brandão 
+- Nome: VINICIUS MARTINS GALVARINO
+- Nome: Alessandro Ribeiro
 
 ---
 
 ## Tecnologias utilizadas
 
-- Java 17
+- Java 21
 - Spring Boot
 - Spring Data JPA
-- Spring Security
-- Eureka Server
-- Oracle XE
-- Flyway
-- Docker
+- Jakarta Validation
 - Maven
+- Oracle XE
+- H2 Database para ambiente cloud
+- Flyway
+- Eureka Server
+- Docker
+- Docker Compose
+- GitHub
+- GitHub Actions
+- GitHub Container Registry (GHCR)
+- Microsoft Azure
+- Azure Container Apps
 
 ---
 
-## Como executar o projeto
+## Arquitetura do projeto
 
-### 1 - Iniciar Oracle pelo Docker
+A solução é composta pelos seguintes serviços:
 
-Executar:
+- energia-ms: microsserviço principal responsável pelas funcionalidades relacionadas ao consumo energético.
+- eureka-server: servidor de descoberta de serviços.
+- oracle-xe: banco de dados Oracle utilizado no ambiente local com Docker Compose.
 
-docker-compose up -d
-
----
-
-### 2 - Executar Eureka Server
-
-Abrir projeto:
-
-eureka-server
-
-Executar:
-
-EurekaServerApplication
-
-Acessar:
-
-http://localhost:5050
+No ambiente em nuvem foi utilizado um perfil específico chamado `cloud`, configurado para utilizar banco H2 em memória e desabilitar o registro no Eureka.
 
 ---
 
-### 3 - Executar microsserviço
+## Como executar localmente com Docker
 
-Abrir projeto:
+### Pré-requisitos
 
-energia-ms
+É necessário possuir:
 
-Executar:
+- Docker
+- Docker Compose
+- Git
 
-EnergiaMsApplication
+Clone o projeto e acesse a pasta:
 
-Acessar:
-
-http://localhost:8081
-
----
-
-## Endpoints disponíveis
-
-### Equipamentos
-
-GET /equipamentos
-
-POST /equipamentos
-
-PUT /equipamentos/{id}
-
-DELETE /equipamentos/{id}
-
----
-
-### Consumo
-
-GET /consumo
-
-POST /consumo
-
-PUT /consumo/{id}
-
-DELETE /consumo/{id}
-
----
-
-### Limites
-
-GET /limites
-
-POST /limites
-
----
-
-### Alertas
-
-GET /alertas
-
-POST /alertas
-
----
-
-### Desligamentos
-
-GET /desligamentos
-
-POST /desligamentos
-
----
-
-## Banco de dados
-
-Oracle XE executado via Docker:
-
-gvenzl/oracle-xe:21-slim
-
-Porta:
-
-1521
-
-Usuário:
-
-system
-
-Senha:
-
-oracle
+```bash
+git clone <URL_DO_REPOSITORIO>
+cd energia-esg-devops
